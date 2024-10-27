@@ -54,7 +54,7 @@ class SafeGas extends StatelessWidget {
                           children: [
                               Expanded(
                                 child: SGButton(
-                                  buttonText: 'Inicar sesión',
+                                  buttonText: 'Iniciar sesión',
                                   onTap: SignInScreen(),
                                   color: Colors.white,
                                   textColor:Colors.black,
