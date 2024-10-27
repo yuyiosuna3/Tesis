@@ -1,10 +1,10 @@
 import 'package:flutter/material.dart';
+import 'package:smart_gas/Screens/start.dart';
 import 'package:smart_gas/widgets/custom_scaffold.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 class SignInScreen extends StatefulWidget {
-  const SignInScreen({
-    super.key,
-  });
+  const SignInScreen({super.key});
 
   @override
   State<SignInScreen> createState() => _SignInScreenState();
@@ -13,6 +13,29 @@ class SignInScreen extends StatefulWidget {
 class _SignInScreenState extends State<SignInScreen> {
   final _formSignInKey = GlobalKey<FormState>();
 
+  // Controladores de usuario y contraseña
+  final _usernameController = TextEditingController();
+  final _passwordController = TextEditingController();
+
+  // Función para validar credenciales
+  Future<void> _signIn() async {
+    final prefs = await SharedPreferences.getInstance();
+    String? savedUsername = prefs.getString('username');
+    String? savedPassword = prefs.getString('password');
+
+    if (_usernameController.text == savedUsername &&
+        _passwordController.text == savedPassword) {
+      Navigator.pushReplacement(
+        context,
+        MaterialPageRoute(builder: (context) => const Start()),
+      );
+    } else {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Usuario o contraseña incorrectos')),
+      );
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return CustomScaffold(
@@ -20,9 +43,7 @@ class _SignInScreenState extends State<SignInScreen> {
         children: [
           const Expanded(
             flex: 1,
-            child: SizedBox(
-              height: 10,
-            ),
+            child: SizedBox(height: 10),
           ),
           Expanded(
             flex: 7,
@@ -35,7 +56,7 @@ class _SignInScreenState extends State<SignInScreen> {
                 ),
               ),
               child: Padding(
-                padding: const EdgeInsets.all(20.0), // Añade un padding general
+                padding: const EdgeInsets.all(20.0),
                 child: Form(
                   key: _formSignInKey,
                   child: Column(
@@ -49,13 +70,13 @@ class _SignInScreenState extends State<SignInScreen> {
                           fontWeight: FontWeight.w500,
                         ),
                       ),
-                      const SizedBox(height: 20), // Espacio entre el título y el campo de texto
+                      const SizedBox(height: 20),
 
-                      // INTRODUCIR USUARIO
-
+                      // Campo de Usuario
                       Padding(
                         padding: const EdgeInsets.symmetric(horizontal: 16.0),
                         child: TextFormField(
+                          controller: _usernameController,
                           validator: (value) {
                             if (value == null || value.isEmpty) {
                               return 'Por favor ingrese su usuario';
@@ -67,36 +88,25 @@ class _SignInScreenState extends State<SignInScreen> {
                             fillColor: Colors.white,
                             label: const Text('Usuario'),
                             hintText: 'Ingrese su usuario',
-                            hintStyle: const TextStyle(
-                              color: Colors.black26,
-                            ),
+                            hintStyle: const TextStyle(color: Colors.black26),
                             border: OutlineInputBorder(
-                              borderSide: const BorderSide(
-                                color: Colors.black12,
-                              ),
-                              borderRadius: BorderRadius.circular(10),
-                            ),
-                            enabledBorder: OutlineInputBorder(
-                              borderSide: const BorderSide(
-                                color: Colors.black12,
-                              ),
                               borderRadius: BorderRadius.circular(10),
                             ),
                           ),
                         ),
                       ),
+                      const SizedBox(height: 20),
 
-                      // INTRODUCIR CONTRASEÑA
-
-                      const SizedBox(height: 20), // Espacio entre los campos de texto
+                      // Campo de Contraseña
                       Padding(
                         padding: const EdgeInsets.symmetric(horizontal: 16.0),
                         child: TextFormField(
+                          controller: _passwordController,
                           obscureText: true,
                           obscuringCharacter: '*',
                           validator: (value) {
                             if (value == null || value.isEmpty) {
-                              return 'Por favor ingrese contraseña';
+                              return 'Por favor ingrese su contraseña';
                             }
                             return null;
                           },
@@ -104,29 +114,17 @@ class _SignInScreenState extends State<SignInScreen> {
                             filled: true,
                             fillColor: Colors.white,
                             label: const Text("Contraseña"),
-                            hintText: 'Ingrese Contraseña',
-                            hintStyle: const TextStyle(
-                              color: Colors.black26,
-                            ),
+                            hintText: 'Ingrese su contraseña',
+                            hintStyle: const TextStyle(color: Colors.black26),
                             border: OutlineInputBorder(
-                              borderSide: const BorderSide(
-                                color: Colors.black12,
-                              ),
-                              borderRadius: BorderRadius.circular(10),
-                            ),
-                            enabledBorder: OutlineInputBorder(
-                              borderSide: const BorderSide(
-                                color: Colors.black12,
-                              ),
                               borderRadius: BorderRadius.circular(10),
                             ),
                           ),
                         ),
                       ),
-
-                      // BOTÓN DE INGRESAR
-
                       const SizedBox(height: 20),
+
+                      // Botón de Ingresar
                       Padding(
                         padding: const EdgeInsets.symmetric(horizontal: 16.0),
                         child: SizedBox(
@@ -134,15 +132,11 @@ class _SignInScreenState extends State<SignInScreen> {
                           child: ElevatedButton(
                             onPressed: () {
                               if (_formSignInKey.currentState!.validate()) {
-                                ScaffoldMessenger.of(context).showSnackBar(
-                                  const SnackBar(
-                                    content: Text('Processing Data'),
-                                  ),
-                                );
+                                _signIn();
                               }
                             },
                             style: ElevatedButton.styleFrom(
-                              foregroundColor: Colors.white, backgroundColor: Colors.black, // Color del texto blanco
+                              backgroundColor: Colors.black,
                               padding: const EdgeInsets.symmetric(vertical: 15),
                               shape: RoundedRectangleBorder(
                                 borderRadius: BorderRadius.circular(10),
@@ -150,7 +144,11 @@ class _SignInScreenState extends State<SignInScreen> {
                             ),
                             child: const Text(
                               'Ingresar',
-                              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                              style: TextStyle(
+                                fontSize: 18,
+                                fontWeight: FontWeight.bold,
+                                color: Colors.white,
+                              ),
                             ),
                           ),
                         ),
