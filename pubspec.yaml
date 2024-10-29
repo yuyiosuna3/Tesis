@@ -81,14 +81,20 @@ flutter:
   # "family" key with the font family name, and a "fonts" key with a
   # list giving the asset and other descriptors for the font. For
   # example:
+
   fonts:
-     - family: OneDay
-       fonts:
-         - asset: assets/fonts/ONEDAY.otf
-fonts:
-     - family: Baskerville
-       fonts:
+    - family: OneDay
+      fonts:
+        - asset: assets/fonts/ONEDAY.otf
+
+    - family: Baskerville
+      fonts:
         - asset: assets/fonts/baskvl.ttf
+
+    - family: DSDigital
+      fonts:
+        - asset: assets/fonts/DS-DIGI.TTF
+
   #       - asset: fonts/TrajanPro_Bold.ttf
   #         weight: 700
   #

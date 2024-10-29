@@ -33,16 +33,17 @@ class _StartState extends State<Start> {
                   width: 200,
                   height: 200,
                   child: CircularProgressIndicator(
-                    value: 0.1, // Porcentaje estático (10%)
+                    value: 0.30, // Porcentaje estático (10%)
                     strokeWidth: 30.0,
                     backgroundColor: Colors.grey.shade300,
                     valueColor: const AlwaysStoppedAnimation<Color>(Colors.pinkAccent),
                   ),
                 ),
                 const Text(
-                  '10%',
+                  '30%',
                   style: TextStyle(
-                  fontSize:40 ,
+                  fontFamily: 'DSDigital',
+                  fontSize:65 ,
                   fontWeight: FontWeight.bold,
                   color: Colors.white,
               ),
