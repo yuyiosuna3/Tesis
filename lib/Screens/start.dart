@@ -1,10 +1,17 @@
 import 'package:flutter/material.dart';
-import 'package:smart_gas/Screens/historial.dart';
-import 'package:smart_gas/Screens/settings.dart';
+import 'package:smart_gas/screens/historial.dart';
+import 'package:smart_gas/screens/settings.dart';
 import 'package:smart_gas/screens/safe_gas.dart';
 
-class Start extends StatelessWidget {
+class Start extends StatefulWidget {
   const Start({Key? key}) : super(key: key);
+
+  @override
+  _StartState createState() => _StartState();
+}
+
+class _StartState extends State<Start> {
+  bool isSwitchOn = false; // Estado inicial del switch
 
   @override
   Widget build(BuildContext context) {
@@ -12,25 +19,103 @@ class Start extends StatelessWidget {
       appBar: AppBar(
         backgroundColor: Colors.black,
         iconTheme: const IconThemeData(color: Colors.white), // Icono del menú en blanco
+        elevation: 0,
       ),
-      body: const Center(
-        child: Text(
-          'Bienvenido a la página de inicio',
-          style: TextStyle(fontSize: 24, color: Colors.white),
+      body: Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            // Gráfica circular en la parte superior, simulando el logo
+            Stack(
+              alignment: Alignment.center,
+              children: [
+                SizedBox(
+                  width: 200,
+                  height: 200,
+                  child: CircularProgressIndicator(
+                    value: 0.1, // Porcentaje estático (10%)
+                    strokeWidth: 30.0,
+                    backgroundColor: Colors.grey.shade300,
+                    valueColor: const AlwaysStoppedAnimation<Color>(Colors.pinkAccent),
+                  ),
+                ),
+                const Text(
+                  '10%',
+                  style: TextStyle(
+                  fontSize:40 ,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.white,
+              ),
+                ),
+              ],
+            ),
+            
+            const SizedBox(height: 40),
+
+            // Texto para el porcentaje de gas
+            const Text(
+              textAlign: TextAlign.center,
+              'Nivel de Gas\nen el Ambiente',
+                style: TextStyle(
+                fontSize: 24,
+                fontWeight: FontWeight.bold,
+                color: Colors.white,
+              ),
+            ),
+            const SizedBox(height: 60),
+
+            // Switch grande en el centro
+            Transform.scale(
+              scale: 3.2, // Escala el tamaño del switch
+              child: Switch(
+                value: isSwitchOn,
+                onChanged: (value) {
+                  setState(() {
+                    isSwitchOn = value;
+                  });
+                },
+                activeColor: Colors.pinkAccent,
+                inactiveThumbColor: Colors.grey,
+                inactiveTrackColor: Colors.grey.shade600,
+              ),
+            ),
+            const SizedBox(height: 45),
+
+            // Texto de estado (Conectado/Desconectado)
+            Text(
+              isSwitchOn ? 'Abierto' : 'Cerrado',
+              style: const TextStyle(
+                fontSize: 24,
+                fontWeight: FontWeight.bold,
+                color: Colors.white,
+              ),
+            ),
+
+            // Descripción adicional del estado
+            Text(
+              isSwitchOn
+                  ? 'La válvula de gas está abierta.'
+                  : 'La válvula de gas está cerrada',
+              style: const TextStyle(
+                fontSize: 16,
+                color: Colors.white70,
+              ),
+            ),
+          ],
         ),
       ),
       backgroundColor: Colors.black, // Fondo negro de la página de inicio
       drawer: Drawer(
         child: Container(
           decoration: const BoxDecoration(
-            color: Color.fromARGB(255, 245, 241, 241), // Fondo para el menú lateral
+            color: Color.fromARGB(149, 204, 203, 203), // Fondo para el menú lateral
           ),
           child: ListView(
             padding: EdgeInsets.zero,
             children: <Widget>[
               const DrawerHeader(
                 decoration: BoxDecoration(
-                  color: Color.fromARGB(255, 245, 241, 241),
+                  color: Color.fromARGB(149, 204, 203, 203),
                 ),
                 child: Center(
                   child: Text(
