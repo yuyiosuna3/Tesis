@@ -12,13 +12,28 @@ class Start extends StatefulWidget {
 
 class _StartState extends State<Start> {
   bool isSwitchOn = false; // Estado inicial del switch
+  double  percentage = 0.80;
+
+  Color getColor(double percentage) {
+    if (percentage <= 0.2) {
+      return Colors.greenAccent;
+    } else if (percentage <= 0.4) {
+      return Colors.yellow;
+    } else if (percentage <= 0.6) {
+      return Colors.deepOrangeAccent;
+    } else {
+      return Colors.redAccent;
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
+    Color progressColor = getColor(percentage);
     return Scaffold(
       appBar: AppBar(
         backgroundColor: Colors.black,
-        iconTheme: const IconThemeData(color: Colors.white), // Icono del menú en blanco
+        iconTheme: const IconThemeData(
+            color: Colors.white), // Icono del menú en blanco
         elevation: 0,
       ),
       body: Center(
@@ -33,31 +48,30 @@ class _StartState extends State<Start> {
                   width: 200,
                   height: 200,
                   child: CircularProgressIndicator(
-                    value: 0.30, // Porcentaje estático (10%)
-                    strokeWidth: 30.0,
-                    backgroundColor: Colors.grey.shade300,
-                    valueColor: const AlwaysStoppedAnimation<Color>(Colors.pinkAccent),
-                  ),
+                      value: percentage, // Porcentaje estático (10%)
+                      strokeWidth: 35,
+                      backgroundColor: Colors.grey.shade300,
+                      valueColor: AlwaysStoppedAnimation<Color>(progressColor)),
                 ),
-                const Text(
-                  '30%',
-                  style: TextStyle(
-                  fontFamily: 'DSDigital',
-                  fontSize:65 ,
-                  fontWeight: FontWeight.bold,
-                  color: Colors.white,
-              ),
+                Text(
+                  '${(percentage * 100).toInt()}%',
+                  style: const TextStyle(
+                    fontFamily: 'DSDigital',
+                    fontSize: 65,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.white,
+                  ),
                 ),
               ],
             ),
-            
+
             const SizedBox(height: 40),
 
             // Texto para el porcentaje de gas
             const Text(
               textAlign: TextAlign.center,
               'Nivel de Gas\nen el Ambiente',
-                style: TextStyle(
+              style: TextStyle(
                 fontSize: 24,
                 fontWeight: FontWeight.bold,
                 color: Colors.white,
@@ -75,7 +89,7 @@ class _StartState extends State<Start> {
                     isSwitchOn = value;
                   });
                 },
-                activeColor: Colors.pinkAccent,
+                activeColor: Colors.redAccent,
                 inactiveThumbColor: Colors.grey,
                 inactiveTrackColor: Colors.grey.shade600,
               ),
@@ -84,7 +98,7 @@ class _StartState extends State<Start> {
 
             // Texto de estado (Conectado/Desconectado)
             Text(
-              isSwitchOn ? 'Abierto' : 'Cerrado',
+              isSwitchOn ? 'Cerrado' : 'Abierto',
               style: const TextStyle(
                 fontSize: 24,
                 fontWeight: FontWeight.bold,
@@ -95,8 +109,8 @@ class _StartState extends State<Start> {
             // Descripción adicional del estado
             Text(
               isSwitchOn
-                  ? 'La válvula de gas está abierta.'
-                  : 'La válvula de gas está cerrada',
+                  ? 'La válvula de gas está cerrada.'
+                  : 'La válvula de gas está abierta.',
               style: const TextStyle(
                 fontSize: 16,
                 color: Colors.white70,
@@ -109,7 +123,8 @@ class _StartState extends State<Start> {
       drawer: Drawer(
         child: Container(
           decoration: const BoxDecoration(
-            color: Color.fromARGB(149, 204, 203, 203), // Fondo para el menú lateral
+            color: Color.fromARGB(
+                149, 204, 203, 203), // Fondo para el menú lateral
           ),
           child: ListView(
             padding: EdgeInsets.zero,
@@ -123,8 +138,7 @@ class _StartState extends State<Start> {
                     'MENÚ',
                     style: TextStyle(
                       color: Colors.black,
-                      fontFamily: 'Baskerville',
-                      fontSize: 28.0,
+                      fontSize: 30.0,
                       fontWeight: FontWeight.bold,
                       letterSpacing: 2.0,
                     ),
@@ -132,7 +146,8 @@ class _StartState extends State<Start> {
                 ),
               ),
               ListTile(
-                leading: const Icon(Icons.settings, color: Colors.black, size: 30),
+                leading:
+                    const Icon(Icons.settings, color: Colors.black, size: 30),
                 title: const Text(
                   'Configuración',
                   style: TextStyle(fontSize: 20, color: Colors.black),
@@ -140,12 +155,14 @@ class _StartState extends State<Start> {
                 onTap: () {
                   Navigator.push(
                     context,
-                    MaterialPageRoute(builder: (context) => const SettingsScreen()),
+                    MaterialPageRoute(
+                        builder: (context) => const SettingsScreen()),
                   );
                 },
               ),
               ListTile(
-                leading: const Icon(Icons.timeline, color: Colors.black, size: 30),
+                leading:
+                    const Icon(Icons.timeline, color: Colors.black, size: 30),
                 title: const Text(
                   'Historial',
                   style: TextStyle(fontSize: 20, color: Colors.black),
@@ -153,12 +170,14 @@ class _StartState extends State<Start> {
                 onTap: () {
                   Navigator.push(
                     context,
-                    MaterialPageRoute(builder: (context) => const HistorialScreen()),
+                    MaterialPageRoute(
+                        builder: (context) => const HistorialScreen()),
                   );
                 },
               ),
               ListTile(
-                leading: const Icon(Icons.logout, color: Colors.black, size: 30),
+                leading:
+                    const Icon(Icons.logout, color: Colors.black, size: 30),
                 title: const Text(
                   'Cerrar sesión',
                   style: TextStyle(fontSize: 20, color: Colors.black),
@@ -167,7 +186,8 @@ class _StartState extends State<Start> {
                   Navigator.pushAndRemoveUntil(
                     context,
                     MaterialPageRoute(builder: (context) => const SafeGas()),
-                    (Route<dynamic> route) => false, // Elimina toda la pila de navegación
+                    (Route<dynamic> route) =>
+                        false, // Elimina toda la pila de navegación
                   );
                 },
               ),
