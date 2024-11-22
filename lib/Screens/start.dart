@@ -12,7 +12,7 @@ class Start extends StatefulWidget {
 
 class _StartState extends State<Start> {
   bool isSwitchOn = false; // Estado inicial del switch
-  double  percentage = 0.80;
+  double  percentage = 0.50;
 
   Color getColor(double percentage) {
     if (percentage <= 0.2) {

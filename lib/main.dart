@@ -1,14 +1,26 @@
 import 'package:flutter/material.dart';
 import 'package:smart_gas/Screens/safe_gas.dart';
+import 'package:firebase_core/firebase_core.dart'; // Importa Firebase Core
+import 'firebase_options.dart';// Importa las opciones de configuración de Firebase
 
-void main() {
+
+void main() async {
+  // Asegúrate de inicializar los bindings de Flutter antes de Firebase
+  WidgetsFlutterBinding.ensureInitialized();
+
+  // Inicializa Firebase con la configuración generada automáticamente
+  await Firebase.initializeApp(
+    options: DefaultFirebaseOptions.currentPlatform,
+  );
+
+  // Corre la aplicación
   runApp(const MyApp());
 }
 
 class MyApp extends StatelessWidget {
   const MyApp({super.key});
 
-  // This widget is the root of your application.
+  // Este widget es la raíz de la aplicación
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
@@ -18,9 +30,7 @@ class MyApp extends StatelessWidget {
         colorScheme: ColorScheme.fromSeed(seedColor: Colors.deepPurple),
         useMaterial3: true,
       ),
-      home: const SafeGas(),
+      home: const SafeGas(), // Pantalla inicial de tu aplicación
     );
   }
 }
-
-
