@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:smart_gas/Screens/safe_gas.dart';
 import 'package:firebase_core/firebase_core.dart'; // Importa Firebase Core
-import 'firebase_options.dart';// Importa las opciones de configuración de Firebase
-
+import 'firebase_options.dart'; // Importa las opciones de configuración de Firebase
+import 'package:smart_gas/Screens/settings.dart'; // Importa la pantalla de configuración (opcional)
 
 void main() async {
   // Asegúrate de inicializar los bindings de Flutter antes de Firebase
@@ -30,6 +30,7 @@ class MyApp extends StatelessWidget {
         colorScheme: ColorScheme.fromSeed(seedColor: Colors.deepPurple),
         useMaterial3: true,
       ),
+      // Configura la pantalla de inicio
       home: const SafeGas(), // Pantalla inicial de tu aplicación
     );
   }
