@@ -15,12 +15,16 @@ class _SettingsScreenState extends State<SettingsScreen> {
   final List<TextEditingController> _phoneControllers = List.generate(5, (_) => TextEditingController());
   final List<String?> _phoneNumbers = List.filled(5, null);
 
+  // Expresión regular para validar números de teléfono de Venezuela
+  final RegExp venezuelaPhoneRegExp = RegExp(r'^(0412|0414|0416|0424|0426)\d{7}$');
+
   @override
   void initState() {
     super.initState();
     _loadUserData();
   }
 
+  // Cargar los datos del usuario desde Firebase Firestore
   Future<void> _loadUserData() async {
     final user = FirebaseAuth.instance.currentUser;
     if (user != null) {
@@ -33,7 +37,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
         final data = userDoc.data();
         if (data != null) {
           setState(() {
-            userMacAddress = data['macAddress'];
+            userMacAddress = (data['macAddress'] as String?)?.replaceAll("_", ":");
             for (int i = 0; i < 5; i++) {
               _phoneNumbers[i] = data['phoneNumber${i + 1}'];
               _phoneControllers[i].text = _phoneNumbers[i] ?? '';
@@ -44,20 +48,42 @@ class _SettingsScreenState extends State<SettingsScreen> {
     }
   }
 
+  // Función para guardar un número de teléfono
   Future<void> _savePhoneNumber(int numberIndex) async {
     final userId = FirebaseAuth.instance.currentUser?.uid;
-    if (userId != null && _phoneControllers[numberIndex].text.isNotEmpty) {
+    final phone = _phoneControllers[numberIndex].text.trim();
+
+    // Validar el número de teléfono
+    if (!venezuelaPhoneRegExp.hasMatch(phone)) {
+      // Si no cumple con el formato, mostrar un mensaje de error
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Ingresa un número de teléfono válido, por ejemplo: 0412XXXXXXX')),
+      );
+      return;
+    }
+
+    // Verificar si el número ya existe en los campos del usuario
+    if (_phoneNumbers.contains(phone)) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Este número de teléfono ya está registrado')),
+      );
+      return;
+    }
+
+    // Si pasa las validaciones, guardar el número
+    if (userId != null && phone.isNotEmpty) {
       final updateData = {
-        'phoneNumber${numberIndex + 1}': _phoneControllers[numberIndex].text.trim(),
+        'phoneNumber${numberIndex + 1}': phone,
       };
 
       await FirebaseFirestore.instance.collection('users').doc(userId).update(updateData);
       setState(() {
-        _phoneNumbers[numberIndex] = _phoneControllers[numberIndex].text.trim();
+        _phoneNumbers[numberIndex] = phone;
       });
     }
   }
 
+  // Función para eliminar un número de teléfono
   Future<void> _deletePhoneNumber(int numberIndex) async {
     final userId = FirebaseAuth.instance.currentUser?.uid;
     if (userId != null) {

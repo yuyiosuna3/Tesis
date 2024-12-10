@@ -3,7 +3,6 @@ import 'package:smart_gas/screens/start.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:smart_gas/widgets/custom_scaffold.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 
 class SignUpScreen extends StatefulWidget {
   const SignUpScreen({super.key});
@@ -24,6 +23,9 @@ class _SignUpScreenState extends State<SignUpScreen> {
   Future<void> _register() async {
     if (_formKey.currentState!.validate()) {
       try {
+        // Procesar dirección MAC: convertir a mayúsculas y usar guiones bajos
+        String processedMacAddress = _macAddressController.text.trim().toUpperCase().replaceAll(":", "_").replaceAll("-", "_");
+
         // Registra al usuario en Firebase Authentication
         UserCredential userCredential =
             await FirebaseAuth.instance.createUserWithEmailAndPassword(
@@ -37,7 +39,7 @@ class _SignUpScreenState extends State<SignUpScreen> {
             .doc(userCredential.user?.uid)
             .set({
           'email': _emailController.text.trim(),
-          'macAddress': _macAddressController.text.trim(),
+          'macAddress': processedMacAddress,
           'createdAt': DateTime.now(),
         });
 
@@ -124,12 +126,11 @@ class _SignUpScreenState extends State<SignUpScreen> {
                                     return 'Por favor ingrese la MAC del dispositivo';
                                   }
 
-                                  // Validar formato y longitud
+                                  // Validar formato de dirección MAC
                                   final macRegExp = RegExp(
                                       r'^([0-9A-Fa-f]{2}[:-]){5}([0-9A-Fa-f]{2})$');
-                                  if (!macRegExp.hasMatch(value)) {
+                                  if (!macRegExp.hasMatch(value.trim())) {
                                     return 'Formato de MAC incorrecto';
-                                    
                                   }
                                   return null;
                                 },
