@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_database/firebase_database.dart';
@@ -19,11 +20,20 @@ class _StartState extends State<Start> {
   DatabaseReference? _databaseRef; // Referencia al Realtime Database
   bool _isMacValid = true; // Indica si la dirección MAC es válida
   String _errorMessage = ""; // Mensaje de error para el usuario
+  Timer? _timer; // Temporizador para verificar el tiempo
+  DateTime? _lastUpdateTime; // Última hora de actualización del valor
+  bool _isDisconnected = false; // Indica si el dispositivo está desconectado
 
   @override
   void initState() {
     super.initState();
     _loadUserMacAndFetchValue();
+  }
+
+  @override
+  void dispose() {
+    _timer?.cancel(); // Cancelar el temporizador cuando se destruya el widget
+    super.dispose();
   }
 
   /// Cargar la dirección MAC del usuario desde Firestore y configurar la referencia de Firebase Database.
@@ -33,20 +43,33 @@ class _StartState extends State<Start> {
     if (user != null) {
       try {
         // Obtén la dirección MAC desde Firestore.
-        final userDoc = await FirebaseFirestore.instance.collection('users').doc(user.uid).get();
+        final userDoc = await FirebaseFirestore.instance
+            .collection('users')
+            .doc(user.uid)
+            .get();
         if (userDoc.exists) {
           final data = userDoc.data();
           if (data != null && data['macAddress'] != null) {
             final String macAddress = data['macAddress'];
 
-            // Establecer la referencia dinámica en Firebase Database con la dirección MAC.
-            _databaseRef = FirebaseDatabase.instance
-                .ref('/devices/$macAddress/sensorData/current/value');
+            // Verifica si la MAC está registrada en Realtime Database.
+            final deviceRef = FirebaseDatabase.instance.ref('/devices/$macAddress');
+            final deviceSnapshot = await deviceRef.get();
 
+            if (!deviceSnapshot.exists) {
+              setState(() {
+                _isMacValid = false;
+                _errorMessage = "La dirección MAC no está registrada en la base de datos.";
+              });
+              return;
+            }
+
+            // Establecer la referencia al sensor específico y escuchar cambios.
+            _databaseRef = deviceRef.child('sensorData/current');
+            
             // Escucha cambios en tiempo real.
             _fetchCurrentValue();
           } else {
-            // Si no existe la dirección MAC, mostrar un mensaje.
             setState(() {
               _isMacValid = false;
               _errorMessage = "No se encontró la dirección MAC registrada.";
@@ -76,19 +99,122 @@ class _StartState extends State<Start> {
   void _fetchCurrentValue() {
     if (_databaseRef != null) {
       _databaseRef!.onValue.listen((event) {
-        final value = event.snapshot.value;
-        setState(() {
-          if (value != null) {
-            // Convierte el valor obtenido a un porcentaje (suponiendo que el rango es de 0 a 100)
-            percentage = (double.tryParse(value.toString()) ?? 0) / 100;
-          } else {
-            _isMacValid = false;
-            _errorMessage = "No se encontraron datos en el dispositivo.";
-          }
-        });
+        final data = event.snapshot.value as Map?;
+        if (data != null) {
+          setState(() {
+            // Actualizar el porcentaje basado en el valor
+            double currentValue =
+                double.tryParse(data['value'].toString()) ?? 0.0;
+            percentage = currentValue / 100;
+
+            // Obtener fecha y hora del último valor
+            String? date = data['date'];
+            String? time = data['time'];
+            if (date != null && time != null) {
+              _lastUpdateTime = _parseDateTime(date, time);
+              _isDisconnected = false; // Actualizar el estado de conexión
+            }
+          });
+
+          // Reiniciar el temporizador para monitorear la conexión
+          _resetTimer();
+        }
       });
     }
   }
+
+  /// Convierte la fecha y hora de la base de datos a un objeto DateTime
+  DateTime? _parseDateTime(String date, String time) {
+    try {
+      // Combina la fecha y hora en un solo objeto
+      return DateTime.parse(date.split('/').reversed.join('-') + 'T' + time);
+    } catch (e) {
+      return null;
+    }
+  }
+
+  /// Reinicia el temporizador para verificar si se ha perdido la conexión
+  void _resetTimer() {
+    _timer?.cancel();
+    _timer = Timer(const Duration(minutes: 1), () {
+      if (_lastUpdateTime != null) {
+        final now = DateTime.now();
+        final difference = now.difference(_lastUpdateTime!).inMinutes;
+
+        if (difference >= 1) {
+          setState(() {
+            _isDisconnected = true; // Cambiar estado a desconectado
+          });
+          _showConnectionWarning();
+        }
+      }
+    });
+  }
+
+  /// Muestra un mensaje de reconexión breve.
+
+  /// Muestra un mensaje de advertencia si se perdió la conexión
+  void _showConnectionWarning() {
+    showDialog(
+      context: context,
+      builder: (context) {
+        return Scaffold(
+          backgroundColor: Colors.black,
+          body: Center(
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                const Icon(
+                  Icons.error_outline,
+                  size: 100,
+                  color: Colors.yellowAccent,
+                ),
+                const SizedBox(height: 20),
+                const Text(
+                  "Advertencia",
+                  style: TextStyle(
+                    fontSize: 28,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.white,
+                  ),
+                ),
+                const SizedBox(height: 15),
+                const Text(
+                  "No se ha recibido un nuevo valor en más de 1 minuto. Verifica la conexión.",
+                  textAlign: TextAlign.center,
+                  style: TextStyle(
+                    fontSize: 18,
+                    color: Colors.white,
+                  ),
+                ),
+                const SizedBox(height: 30),
+                ElevatedButton.icon(
+                  onPressed: () {
+                    Navigator.of(context).pop(); // Cierra el diálogo
+                  },
+                  icon: const Icon(Icons.refresh, color: Colors.black),
+                  label: const Text(
+                    "Aceptar",
+                    style: TextStyle(color: Colors.black),
+                  ),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Colors.white,
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: 24, vertical: 12),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(25),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  /// Muestra un mensaje de reconexión breve
 
   Color getColor(double percentage) {
     if (percentage <= 0.2) {
@@ -124,27 +250,22 @@ class _StartState extends State<Start> {
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              // Ícono de advertencia
               const Icon(
                 Icons.error_outline,
                 size: 100,
                 color: Colors.redAccent,
               ),
               const SizedBox(height: 20),
-
-              // Mensaje principal
-              Text(
+              const Text(
                 "¡Ups! Algo salió mal",
                 textAlign: TextAlign.center,
-                style: const TextStyle(
+                style: TextStyle(
                   fontSize: 28,
                   fontWeight: FontWeight.bold,
                   color: Colors.white,
                 ),
               ),
               const SizedBox(height: 15),
-
-              // Descripción del error
               Text(
                 _errorMessage,
                 textAlign: TextAlign.center,
@@ -154,13 +275,11 @@ class _StartState extends State<Start> {
                 ),
               ),
               const SizedBox(height: 30),
-
-              // Botón para intentar de nuevo
               ElevatedButton.icon(
                 onPressed: () {
-                  // Recarga los datos al pulsar el botón
                   setState(() {
-                    _isMacValid = true; // Restablece el estado para intentar de nuevo
+                    _isMacValid =
+                        true; // Restablece el estado para intentar de nuevo
                     _loadUserMacAndFetchValue();
                   });
                 },
@@ -171,7 +290,8 @@ class _StartState extends State<Start> {
                 ),
                 style: ElevatedButton.styleFrom(
                   backgroundColor: Colors.redAccent,
-                  padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(25),
                   ),
@@ -188,41 +308,49 @@ class _StartState extends State<Start> {
       appBar: AppBar(
         backgroundColor: Colors.black,
         iconTheme: const IconThemeData(
-            color: Colors.white), // Icono del menú en blanco
+          color: Colors.white,
+        ),
         elevation: 0,
       ),
       body: Center(
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            // Gráfica circular en la parte superior, simulando el logo
-            Stack(
-              alignment: Alignment.center,
-              children: [
-                SizedBox(
-                  width: 200,
-                  height: 200,
-                  child: CircularProgressIndicator(
-                      value: percentage, // Porcentaje actualizado
-                      strokeWidth: 35,
-                      backgroundColor: Colors.grey.shade300,
-                      valueColor: AlwaysStoppedAnimation<Color>(progressColor)),
+            Padding(
+              padding: const EdgeInsets.only(
+                  bottom: 20), // Ajuste para que quede sobre la gráfica
+              child: Text(
+                _isDisconnected ? "Desconectado" : "Conectado",
+                style: TextStyle(
+                  fontSize: 18,
+                  fontWeight: FontWeight.bold,
+                  color:
+                      _isDisconnected ? Colors.redAccent : Colors.greenAccent,
                 ),
-                Text(
-                  '${(percentage * 100).toInt()}%',
-                  style: const TextStyle(
-                    fontFamily: 'DSDigital',
-                    fontSize: 65,
-                    fontWeight: FontWeight.bold,
-                    color: Colors.white,
-                  ),
-                ),
-              ],
+              ),
             ),
-
+            Stack(alignment: Alignment.center, children: [
+              SizedBox(
+                width: 200,
+                height: 200,
+                child: CircularProgressIndicator(
+                  value: percentage,
+                  strokeWidth: 35,
+                  backgroundColor: Colors.grey.shade300,
+                  valueColor: AlwaysStoppedAnimation<Color>(progressColor),
+                ),
+              ),
+              Text(
+                '${(percentage * 100).toInt()}%',
+                style: const TextStyle(
+                  fontFamily: 'DSDigital',
+                  fontSize: 65,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.white,
+                ),
+              ),
+            ]),
             const SizedBox(height: 40),
-
-            // Texto para el porcentaje de gas
             const Text(
               textAlign: TextAlign.center,
               'Nivel de Gas\nen el Ambiente',
@@ -233,10 +361,8 @@ class _StartState extends State<Start> {
               ),
             ),
             const SizedBox(height: 60),
-
-            // Switch grande en el centro
             Transform.scale(
-              scale: 3.2, // Escala el tamaño del switch
+              scale: 3.2,
               child: Switch(
                 value: isSwitchOn,
                 onChanged: (value) {
@@ -250,8 +376,6 @@ class _StartState extends State<Start> {
               ),
             ),
             const SizedBox(height: 45),
-
-            // Texto de estado (Conectado/Desconectado)
             Text(
               isSwitchOn ? 'Cerrado' : 'Abierto',
               style: const TextStyle(
@@ -260,8 +384,6 @@ class _StartState extends State<Start> {
                 color: Colors.white,
               ),
             ),
-
-            // Descripción adicional del estado
             Text(
               isSwitchOn
                   ? 'La válvula de gas está cerrada.'
@@ -274,12 +396,16 @@ class _StartState extends State<Start> {
           ],
         ),
       ),
-      backgroundColor: Colors.black, // Fondo negro de la página de inicio
+      backgroundColor: Colors.black,
       drawer: Drawer(
         child: Container(
           decoration: const BoxDecoration(
             color: Color.fromARGB(
-                149, 204, 203, 203), // Fondo para el menú lateral
+              149,
+              204,
+              203,
+              203,
+            ),
           ),
           child: ListView(
             padding: EdgeInsets.zero,
@@ -341,8 +467,7 @@ class _StartState extends State<Start> {
                   Navigator.pushAndRemoveUntil(
                     context,
                     MaterialPageRoute(builder: (context) => const SafeGas()),
-                    (Route<dynamic> route) =>
-                        false, // Elimina toda la pila de navegación
+                    (Route<dynamic> route) => false,
                   );
                 },
               ),
