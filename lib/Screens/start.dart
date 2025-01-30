@@ -6,6 +6,8 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:smart_gas/screens/historial.dart';
 import 'package:smart_gas/screens/settings.dart';
 import 'package:smart_gas/screens/safe_gas.dart';
+import 'package:smart_gas/Screens/notification_service.dart';
+
 
 class Start extends StatefulWidget {
   const Start({Key? key}) : super(key: key);
@@ -24,11 +26,14 @@ class _StartState extends State<Start> {
   DateTime? _lastUpdateTime; // Última hora de actualización del valor
   bool _isDisconnected = false; // Indica si el dispositivo está desconectado
 
-  @override
-  void initState() {
-    super.initState();
-    _loadUserMacAndFetchValue();
-  }
+@override
+void initState() {
+  super.initState();
+  NotificationService.initialize(); // Inicializar notificaciones
+  _loadUserMacAndFetchValue(); // Asegúrate de usar el nombre correcto
+}
+
+
 
   @override
   void dispose() {
@@ -107,6 +112,16 @@ class _StartState extends State<Start> {
                 double.tryParse(data['value'].toString()) ?? 0.0;
             percentage = currentValue / 100;
 
+                      // Verifica si el gas ha alcanzado o superado el 50% y cierra el switch automáticamente
+          if (percentage >= 0.4) {
+            NotificationService.showNotification(
+              'Alerta de Gas',
+              'El nivel de gas ha alcanzado el 50%',
+            );
+            isSwitchOn = true; // Cierra el switch
+          }
+
+
             // Obtener fecha y hora del último valor
             String? date = data['date'];
             String? time = data['time'];
@@ -136,12 +151,12 @@ class _StartState extends State<Start> {
   /// Reinicia el temporizador para verificar si se ha perdido la conexión
   void _resetTimer() {
     _timer?.cancel();
-    _timer = Timer(const Duration(minutes: 1), () {
+    _timer = Timer(const Duration(seconds: 10), () {
       if (_lastUpdateTime != null) {
         final now = DateTime.now();
-        final difference = now.difference(_lastUpdateTime!).inMinutes;
+        final difference = now.difference(_lastUpdateTime!).inSeconds;
 
-        if (difference >= 1) {
+        if (difference >= 10) {
           setState(() {
             _isDisconnected = true; // Cambiar estado a desconectado
           });
@@ -180,7 +195,7 @@ class _StartState extends State<Start> {
                 ),
                 const SizedBox(height: 15),
                 const Text(
-                  "No se ha recibido un nuevo valor en más de 1 minuto. Verifica la conexión.",
+                  "No se ha recibido un nuevo valor en más de 10 segundos. Verifica la conexión.",
                   textAlign: TextAlign.center,
                   style: TextStyle(
                     fontSize: 18,
@@ -367,9 +382,17 @@ class _StartState extends State<Start> {
                 value: isSwitchOn,
                 onChanged: (value) {
                   setState(() {
-                    isSwitchOn = value;
-                  });
-                },
+                      if (percentage < 0.4) {
+                        isSwitchOn = value; // Permite cambiar solo si el porcentaje es menor al 50%
+                      } else if (!value) {
+                        // Mostrar alerta si intenta abrir el switch con porcentaje >= 50%
+                        NotificationService.showNotification(
+                          'Acción Restringida',
+                          'Porcentaje de gas alto.',
+                        );
+                      }
+                    });
+                  },
                 activeColor: Colors.redAccent,
                 inactiveThumbColor: Colors.grey,
                 inactiveTrackColor: Colors.grey.shade600,

@@ -3,6 +3,8 @@ import 'package:smart_gas/Screens/safe_gas.dart';
 import 'package:firebase_core/firebase_core.dart'; // Importa Firebase Core
 import 'firebase_options.dart'; // Importa las opciones de configuración de Firebase
 import 'package:smart_gas/Screens/settings.dart'; // Importa la pantalla de configuración (opcional)
+import 'package:smart_gas/Screens/notification_service.dart';
+import 'package:smart_gas/screens/start.dart';
 
 void main() async {
   // Asegúrate de inicializar los bindings de Flutter antes de Firebase
@@ -13,6 +15,7 @@ void main() async {
     options: DefaultFirebaseOptions.currentPlatform,
   );
 
+   // Inicializar notificaciones
   // Corre la aplicación
   runApp(const MyApp());
 }
