@@ -1,8 +1,8 @@
-import 'package:flutter/material.dart';
-import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:firebase_auth/firebase_auth.dart';
+import 'package:flutter/material.dart';                          // UI en Flutter
+import 'package:cloud_firestore/cloud_firestore.dart';           // Acceso a Firebase Firestore
+import 'package:firebase_auth/firebase_auth.dart';               // Autenticación de usuarios con Firebase
 
-class SettingsScreen extends StatefulWidget {
+class SettingsScreen extends StatefulWidget {                    
   const SettingsScreen({super.key});
 
   @override
@@ -10,10 +10,11 @@ class SettingsScreen extends StatefulWidget {
 }
 
 class _SettingsScreenState extends State<SettingsScreen> {
-  String? userEmail;
-  String? userMacAddress;
-  final List<TextEditingController> _phoneControllers = List.generate(5, (_) => TextEditingController());
-  final List<String?> _phoneNumbers = List.filled(5, null);
+  String? userEmail;                                             // Email del usuario autenticado
+  String? userMacAddress;                                        // Dirección MAC del dispositivo
+  final List<TextEditingController> _phoneControllers =          // Lista de controladores para los TextField
+      List.generate(5, (_) => TextEditingController());
+  final List<String?> _phoneNumbers = List.filled(5, null);      // Lista para almacenar los números guardados
 
   // Expresión regular para validar números de teléfono de Venezuela
   final RegExp venezuelaPhoneRegExp = RegExp(r'^(0412|0414|0416|0424|0426)\d{7}$');
@@ -21,7 +22,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
   @override
   void initState() {
     super.initState();
-    _loadUserData();
+    _loadUserData();                                            // Al iniciar, carga los datos del usuario
   }
 
   // Cargar los datos del usuario desde Firebase Firestore
@@ -29,7 +30,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
     final user = FirebaseAuth.instance.currentUser;
     if (user != null) {
       setState(() {
-        userEmail = user.email;
+        userEmail = user.email;                                 // Guardar el correo del usuario
       });
 
       final userDoc = await FirebaseFirestore.instance.collection('users').doc(user.uid).get();
@@ -37,8 +38,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
         final data = userDoc.data();
         if (data != null) {
           setState(() {
-            userMacAddress = (data['macAddress'] as String?)?.replaceAll("_", ":");
-            for (int i = 0; i < 5; i++) {
+            userMacAddress = (data['macAddress'] as String?)?.replaceAll("_", ":"); // Reemplaza _ por : para formato original
+            for (int i = 0; i < 5; i++) {                                           // Llena los campos de teléfonos existentes
               _phoneNumbers[i] = data['phoneNumber${i + 1}'];
               _phoneControllers[i].text = _phoneNumbers[i] ?? '';
             }
@@ -63,7 +64,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
     }
 
     // Verificar si el número ya existe en los campos del usuario
-    if (_phoneNumbers.contains(phone)) {
+    if (_phoneNumbers.contains(phone)) { // Evitar duplicados
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Este número de teléfono ya está registrado')),
       );
@@ -78,7 +79,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
 
       await FirebaseFirestore.instance.collection('users').doc(userId).update(updateData);
       setState(() {
-        _phoneNumbers[numberIndex] = phone;
+        _phoneNumbers[numberIndex] = phone; // Actualiza en la UI local
       });
     }
   }
@@ -88,13 +89,13 @@ class _SettingsScreenState extends State<SettingsScreen> {
     final userId = FirebaseAuth.instance.currentUser?.uid;
     if (userId != null) {
       final updateData = {
-        'phoneNumber${numberIndex + 1}': FieldValue.delete(),
+        'phoneNumber${numberIndex + 1}': FieldValue.delete(), // Borra el campo del documento
       };
 
       await FirebaseFirestore.instance.collection('users').doc(userId).update(updateData);
       setState(() {
-        _phoneNumbers[numberIndex] = null;
-        _phoneControllers[numberIndex].clear();
+        _phoneNumbers[numberIndex] = null;                      // Limpia el dato local
+        _phoneControllers[numberIndex].clear();                 // Limpia el input
       });
     }
   }
@@ -102,35 +103,36 @@ class _SettingsScreenState extends State<SettingsScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      backgroundColor: Colors.black,
       appBar: AppBar(
         title: const Text(
           "Configuración",
-          style: TextStyle(color: Colors.black),
+          style: TextStyle(color: Colors.white),
         ),
+        backgroundColor: Colors.blueGrey[900],
         centerTitle: true,
-        backgroundColor: Colors.white,
-        elevation: 0,
+        iconTheme: const IconThemeData(color: Colors.white),
       ),
       body: Container(
-        color: Colors.white,
+        color: Colors.black,
         padding: const EdgeInsets.all(16.0),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             const SizedBox(height: 20),
             Text(
-              "Usuario: ${userEmail ?? 'Cargando...'}",
-              style: const TextStyle(fontSize: 16, color: Colors.black),
+              "Usuario: ${userEmail ?? 'Cargando...'}", 
+              style: const TextStyle(fontSize: 16, color: Colors.white),
             ),
             const SizedBox(height: 10),
             Text(
               "Dirección MAC: ${userMacAddress ?? 'Cargando...'}",
-              style: const TextStyle(fontSize: 16, color: Colors.black),
+              style: const TextStyle(fontSize: 16, color: Colors.white),
             ),
             const SizedBox(height: 30),
             const Text(
               "Números de Teléfono",
-              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.black),
+              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.white),
             ),
             const SizedBox(height: 20),
 
@@ -146,13 +148,15 @@ class _SettingsScreenState extends State<SettingsScreen> {
                         Expanded(
                           child: TextFormField(
                             controller: _phoneControllers[index],
+                            style: const TextStyle(color: Colors.white),
                             decoration: InputDecoration(
                               hintText: "Agregar número de teléfono",
+                               hintStyle: TextStyle(color: Colors.grey),
                               border: OutlineInputBorder(
                                 borderRadius: BorderRadius.circular(10),
                               ),
                               focusedBorder: OutlineInputBorder(
-                                borderSide: const BorderSide(color: Colors.grey),
+                                borderSide: const BorderSide(color: Colors.white),
                                 borderRadius: BorderRadius.circular(10),
                               ),
                             ),
@@ -168,7 +172,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                         IconButton(
                           icon: Icon(
                             _phoneNumbers[index] == null ? Icons.add : Icons.delete,
-                            color: _phoneNumbers[index] == null ? Colors.grey : Colors.red,
+                            color: _phoneNumbers[index] == null ? Colors.white : Colors.red,
                           ),
                           onPressed: () {
                             if (_phoneNumbers[index] == null) {

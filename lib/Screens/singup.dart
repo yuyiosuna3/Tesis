@@ -1,9 +1,11 @@
-import 'package:flutter/material.dart';
-import 'package:smart_gas/screens/start.dart';
-import 'package:firebase_auth/firebase_auth.dart';
-import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:smart_gas/widgets/custom_scaffold.dart';
+import 'package:flutter/material.dart';                     // Interfaz de usuario
+import 'package:smart_gas/screens/start.dart';              // Pantalla a la que se navega después del registro
+import 'package:firebase_auth/firebase_auth.dart';          // Autenticación con Firebase
+import 'package:cloud_firestore/cloud_firestore.dart';      // Base de datos Firestore
+import 'package:smart_gas/widgets/custom_scaffold.dart';    // Scaffold personalizado para la app
+import 'package:mobile_scanner/mobile_scanner.dart';        // Escáner de código QR
 
+// Widget principal de la pantalla de registro
 class SignUpScreen extends StatefulWidget {
   const SignUpScreen({super.key});
 
@@ -11,6 +13,7 @@ class SignUpScreen extends StatefulWidget {
   State<SignUpScreen> createState() => _SignUpScreenState();
 }
 
+// Estado asociado a la pantalla
 class _SignUpScreenState extends State<SignUpScreen> {
   final _formKey = GlobalKey<FormState>();
 
@@ -19,12 +22,55 @@ class _SignUpScreenState extends State<SignUpScreen> {
   final _passwordController = TextEditingController();
   final _macAddressController = TextEditingController();
 
+   // Función para escanear QR y obtener la dirección MAC
+  void _scanQRCode() {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text("Escanear Código QR"),
+        content: SizedBox(
+          height: 300,
+          width: 300,
+          child: MobileScanner(
+            onDetect: (capture) {
+              final List<Barcode> barcodes = capture.barcodes;
+              if (barcodes.isNotEmpty) {
+                final String scannedMac = barcodes.first.rawValue ?? "";
+                setState(() {
+                  _macAddressController.text = scannedMac;          // Muestra la MAC escaneada en el campo de texto
+                });
+                Navigator.pop(context);
+              }
+            },
+          ),
+        ),
+      ),
+    );
+  }
+
+
   // Función para registrar y almacenar datos en Firebase
   Future<void> _register() async {
     if (_formKey.currentState!.validate()) {
       try {
         // Procesar dirección MAC: convertir a mayúsculas y usar guiones bajos
         String processedMacAddress = _macAddressController.text.trim().toUpperCase().replaceAll(":", "_").replaceAll("-", "_");
+
+         // Verificar si la dirección MAC ya está registrada
+        final existingUsers = await FirebaseFirestore.instance
+            .collection('users')
+            .where('macAddress', isEqualTo: processedMacAddress)
+            .get();
+
+        if (existingUsers.docs.isNotEmpty) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Esta dirección MAC ya está registrada.'),
+            ),
+          );
+          return; // Se detiene el proceso de registro
+        }
+
 
         // Registra al usuario en Firebase Authentication
         UserCredential userCredential =
@@ -53,6 +99,7 @@ class _SignUpScreenState extends State<SignUpScreen> {
           MaterialPageRoute(builder: (context) => const Start()),
         );
       } catch (e) {
+        // Manejo de errores específicos
         String errorMessage = 'Ocurrió un error. Inténtalo nuevamente.';
 
         if (e is FirebaseAuthException) {
@@ -76,10 +123,10 @@ class _SignUpScreenState extends State<SignUpScreen> {
   @override
   Widget build(BuildContext context) {
     return CustomScaffold(
-      child: SingleChildScrollView(
+      child: SingleChildScrollView(           // Permite desplazar si la pantalla es pequeña
         child: ConstrainedBox(
           constraints: BoxConstraints(
-            minHeight: MediaQuery.of(context).size.height,
+            minHeight: MediaQuery.of(context).size.height, // Asegura altura mínima
           ),
           child: IntrinsicHeight(
             child: Column(
@@ -101,7 +148,7 @@ class _SignUpScreenState extends State<SignUpScreen> {
                     child: Padding(
                       padding: const EdgeInsets.all(20.0),
                       child: Form(
-                        key: _formKey,
+                        key: _formKey,                      
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.center,
                           children: [
@@ -117,41 +164,51 @@ class _SignUpScreenState extends State<SignUpScreen> {
 
                             // Campo de Dirección MAC
                             Padding(
-                              padding:
-                                  const EdgeInsets.symmetric(horizontal: 16.0),
-                              child: TextFormField(
-                                controller: _macAddressController,
-                                validator: (value) {
-                                  if (value == null || value.isEmpty) {
-                                    return 'Por favor ingrese la MAC del dispositivo';
-                                  }
+                              padding: const EdgeInsets.symmetric(horizontal: 16.0),
+                              child: Row(
+                                children: [
+                                  // Campo de entrada de MAC
+                                  Expanded(
+                                    child: TextFormField(
+                                      controller: _macAddressController,
+                                      validator: (value) {
+                                        if (value == null || value.isEmpty) {
+                                          return 'Por favor ingrese la MAC del dispositivo';
+                                        }
 
-                                  // Validar formato de dirección MAC
-                                  final macRegExp = RegExp(
-                                      r'^([0-9A-Fa-f]{2}[:-]){5}([0-9A-Fa-f]{2})$');
-                                  if (!macRegExp.hasMatch(value.trim())) {
-                                    return 'Formato de MAC incorrecto';
-                                  }
-                                  return null;
-                                },
-                                decoration: InputDecoration(
-                                  filled: true,
-                                  fillColor: Colors.white,
-                                  label: const Text('Dirección MAC'),
-                                  hintText: 'Ingrese la MAC del dispositivo',
-                                  hintStyle:
-                                      const TextStyle(color: Colors.black26),
-                                  border: OutlineInputBorder(
-                                    borderRadius: BorderRadius.circular(10),
+                                        // Validar formato de dirección MAC
+                                        final macRegExp =
+                                            RegExp(r'^([0-9A-Fa-f]{2}[:-]){5}([0-9A-Fa-f]{2})$');
+                                        if (!macRegExp.hasMatch(value.trim())) {
+                                          return 'Formato de MAC incorrecto';
+                                        }
+                                        return null;
+                                      },
+                                      decoration: InputDecoration(
+                                        filled: true,
+                                        fillColor: Colors.white,
+                                        label: const Text('Dirección MAC'),
+                                        hintText: 'Ingrese la MAC del dispositivo',
+                                        hintStyle: const TextStyle(color: Colors.black26),
+                                        border: OutlineInputBorder(
+                                          borderRadius: BorderRadius.circular(10),
+                                        ),
+                                        focusedBorder: OutlineInputBorder(
+                                          borderSide: const BorderSide(color: Colors.grey),
+                                          borderRadius: BorderRadius.circular(10),
+                                        ),
+                                        labelStyle: const TextStyle(color: Colors.black),
+                                      ),
+                                    ),
                                   ),
-                                  focusedBorder: OutlineInputBorder(
-                                    borderSide:
-                                        const BorderSide(color: Colors.grey),
-                                    borderRadius: BorderRadius.circular(10),
+                                  const SizedBox(width: 10), // Espaciado entre el campo y el botón
+
+                                  // Botón de escáner QR
+                                  IconButton(
+                                    icon: const Icon(Icons.qr_code_scanner, size: 30, color: Colors.black),
+                                    onPressed: _scanQRCode,
                                   ),
-                                  labelStyle:
-                                      const TextStyle(color: Colors.black),
-                                ),
+                                ],
                               ),
                             ),
                             const SizedBox(height: 20),

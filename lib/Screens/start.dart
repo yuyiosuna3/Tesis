@@ -3,10 +3,13 @@ import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_database/firebase_database.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:smart_gas/Screens/home_bt.dart';
 import 'package:smart_gas/screens/historial.dart';
 import 'package:smart_gas/screens/settings.dart';
 import 'package:smart_gas/screens/safe_gas.dart';
 import 'package:smart_gas/Screens/notification_service.dart';
+import 'package:flutter_blue_plus/flutter_blue_plus.dart';
+import 'package:permission_handler/permission_handler.dart';
 
 
 class Start extends StatefulWidget {
@@ -26,21 +29,43 @@ class _StartState extends State<Start> {
   DateTime? _lastUpdateTime; // Última hora de actualización del valor
   bool _isDisconnected = false; // Indica si el dispositivo está desconectado
 
+ /// Solicita permisos necesarios para Bluetooth y Ubicación
+Future<void> requestPermissions() async {
+  // Solicitar permisos de Bluetooth y Ubicación
+  Map<Permission, PermissionStatus> statuses = await [
+    Permission.bluetooth,
+    Permission.bluetoothConnect,
+    Permission.bluetoothScan,
+    Permission.location,
+  ].request();
+
+  // Validar si se otorgaron todos los permisos
+  if (statuses.values.any((status) => status.isDenied)) {
+    print("Permisos denegados. Algunas funcionalidades pueden no funcionar.");
+  }
+  if (statuses.values.any((status) => status.isPermanentlyDenied)) {
+    print("Algunos permisos fueron permanentemente denegados.");
+    openAppSettings(); // Abrir la configuración de la app
+  }
+}
+
+
 @override
 void initState() {
   super.initState();
   NotificationService.initialize(); // Inicializar notificaciones
-  _loadUserMacAndFetchValue(); // Asegúrate de usar el nombre correcto
+  requestPermissions(); // Solicitar permisos
+  _loadUserMacAndFetchValue();
 }
 
 
 
   @override
   void dispose() {
-    _timer?.cancel(); // Cancelar el temporizador cuando se destruya el widget
+    _timer?.cancel(); 
     super.dispose();
   }
-
+  
   /// Cargar la dirección MAC del usuario desde Firestore y configurar la referencia de Firebase Database.
   Future<void> _loadUserMacAndFetchValue() async {
     final user = FirebaseAuth.instance.currentUser;
@@ -111,14 +136,17 @@ void initState() {
             double currentValue =
                 double.tryParse(data['value'].toString()) ?? 0.0;
             percentage = currentValue / 100;
-
+             bool switchFromDb = data['Switch'] ?? false;
+          if (switchFromDb != isSwitchOn) {
+            isSwitchOn = switchFromDb;
+            print("Switch actualizado en la app: $isSwitchOn");
+          }
                       // Verifica si el gas ha alcanzado o superado el 50% y cierra el switch automáticamente
-          if (percentage >= 0.4) {
+          if (percentage >= 0.5) {
             NotificationService.showNotification(
               'Alerta de Gas',
               'El nivel de gas ha alcanzado el 50%',
             );
-            isSwitchOn = true; // Cierra el switch
           }
 
 
@@ -138,6 +166,20 @@ void initState() {
     }
   }
 
+  /// Cambiar el estado del switch en Firebase y reflejar en la UI
+void _toggleSwitch(bool value) {
+  if (_databaseRef != null) {
+    _databaseRef!.child('Switch').set(value).then((_) {
+      setState(() {
+        isSwitchOn = value;
+      });
+      print("Switch actualizado en Firebase: $value");
+    }).catchError((error) {
+      print("Error actualizando el switch en Firebase: $error");
+    });
+  }
+}
+
   /// Convierte la fecha y hora de la base de datos a un objeto DateTime
   DateTime? _parseDateTime(String date, String time) {
     try {
@@ -147,6 +189,8 @@ void initState() {
       return null;
     }
   }
+
+  
 
   /// Reinicia el temporizador para verificar si se ha perdido la conexión
   void _resetTimer() {
@@ -382,8 +426,8 @@ void initState() {
                 value: isSwitchOn,
                 onChanged: (value) {
                   setState(() {
-                      if (percentage < 0.4) {
-                        isSwitchOn = value; // Permite cambiar solo si el porcentaje es menor al 50%
+                      if (percentage < 0.5) {
+                       _toggleSwitch(value); // Actualizar en Firebase y reflejar en la UI
                       } else if (!value) {
                         // Mostrar alerta si intenta abrir el switch con porcentaje >= 50%
                         NotificationService.showNotification(
@@ -476,6 +520,21 @@ void initState() {
                     context,
                     MaterialPageRoute(
                         builder: (context) => const HistorialScreen()),
+                  );
+                },
+              ),
+              ListTile(
+                leading:
+                    const Icon(Icons.bluetooth, color: Colors.black, size: 30),
+                title: const Text(
+                  'Conexión a Bluetooth',
+                  style: TextStyle(fontSize: 20, color: Colors.black),
+                ),
+                onTap: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                        builder: (context) => const Bt()),
                   );
                 },
               ),
